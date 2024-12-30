@@ -16,10 +16,12 @@ class AuthApp:
 
     def build(self, page: ft.Page):
         self.page = page
-        page.title = "로그인 및 구독 관리"
+        page.title = "로그인"
         page.vertical_alignment = ft.MainAxisAlignment.CENTER
         page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         page.theme_mode = ft.ThemeMode.LIGHT
+        page.window.width = 400
+        page.window.height = 600
 
         # 상태 표시 텍스트
         self.status_text = ft.Text("", size=16)
@@ -79,7 +81,7 @@ class AuthApp:
             shadow=ft.BoxShadow(
                 spread_radius=1,
                 blur_radius=15,
-                color=ft.colors.BLUE_GREY_100,
+                color=ft.Colors.BLUE_GREY_100,
             )
         )
 

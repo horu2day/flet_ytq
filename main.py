@@ -136,7 +136,7 @@ def extract_korean_text_from_image_url(image_url):
         return ""
 
 def main(page: ft.Page):
-    page.title = "Youtube 핵심 질문/답변 추출기"
+    page.title = "MyTube Second Brain"
     page.window.width = 600
     page.window.height = 800
     page.window.left = 10
@@ -148,13 +148,15 @@ def main(page: ft.Page):
     url_field = ft.TextField(label="YouTube URL", width=500)
     def question_field_on_submit(e):
         re_answer(e)
-    question_field = ft.TextField(label="핵심 질문", width=500)
+    question_field = ft.TextField(label="썸네일 질문", width=500)
     question_field.on_submit = question_field_on_submit
     answer_text = ft.Markdown(
             """""",
             selectable=True,
             extension_set=ft.MarkdownExtensionSet.COMMON_MARK,
             on_tap_link=lambda e: page.launch_url(e.data),
+            width=600,
+            height=600,
         )
     
     scrollable_answer = ft.Container(  # Container로 감싸기
@@ -163,7 +165,7 @@ def main(page: ft.Page):
             scroll=ft.ScrollMode.ALWAYS,
         ),
         
-        border=ft.border.all(1, ft.colors.GREY_300),
+        border=ft.border.all(1, ft.Colors.GREY_300),
         border_radius=5,
         padding=10,
         expand=True,  # 추가: Container가 사용 가능한 공간을 모두 차지하도록 설정
@@ -273,15 +275,15 @@ def main(page: ft.Page):
         url_field,
         ft.Row(  # Row 위젯으로 버튼들 묶기
             [
-             ft.ElevatedButton("추출하기", on_click=extract_info),
-             ft.ElevatedButton("요약정리", on_click=summarize_answer),
+             ft.ElevatedButton("정답", on_click=extract_info),
+             ft.ElevatedButton("영상정리", on_click=summarize_answer),
             ],
             alignment=ft.MainAxisAlignment.CENTER, # 버튼 중앙 정렬 추가
         ),
         question_field,
         ft.Row(  # Row 위젯으로 버튼들 묶기
             [
-             ft.ElevatedButton("재답변", on_click=re_answer),
+             ft.ElevatedButton("다시답변해라", on_click=re_answer),
             ],
             alignment=ft.MainAxisAlignment.CENTER, # 버튼 중앙 정렬 추가
         ),# 요약정리 버튼 추가
