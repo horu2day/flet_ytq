@@ -13,7 +13,8 @@ def main(page: ft.Page):
     auth_app = AuthApp(auth_callback)
     auth_app.build(page)
     
-    
+def handler(event, context):
+    ft.app(target=main, view=ft.WEB_BROWSER)
 
 if __name__ == "__main__":
     ft.app(target=main, view=ft.WEB_BROWSER) # view=ft.WEB_BROWSER 추가
