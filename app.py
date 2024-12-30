@@ -14,9 +14,10 @@ def main(page: ft.Page):
     auth_app.build(page)
 
 def handler(event, context):
-    # Vercel 환경에서 실행되는 경우
-    ft.app(target=main, view=ft.WEB_BROWSER, server_port=0) # 서버 포트 0으로 설정
-    
+     # Vercel 환경에서 실행되는 경우
+    page = ft.Page()
+    main(page) # page 를 직접 넘겨주고, ft.app()를 호출하지 않음.
+
     return {
         'statusCode': 200,
         'body': "Flet app initialized"
