@@ -91,3 +91,4 @@ watchfiles==1.0.3
 websockets==13.1
 yarl==1.18.3
 youtube-transcript-api==0.6.3
+pyinstaller

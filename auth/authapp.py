@@ -6,6 +6,7 @@ import jwt
 
 
 from auth.authmanager import JWT_SECRET, AuthManager
+from utils import get_resource_path
 
 class AuthApp:
     def __init__(self, auth_callback):
@@ -89,14 +90,13 @@ class AuthApp:
         page.update()
 
     async def handle_google_login(self, e):
-
-        
         self.status_text.value = "로그인 중..."
         self.status_text.update()
         try:
             # OAuth 2.0 flow 생성
+            secrets_file = get_resource_path("client_secrets.json")
             flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
-                "client_secrets.json", 
+               secrets_file , 
                 ['openid', 'https://www.googleapis.com/auth/userinfo.email']
             )
             # 로컬 서버로 인증
