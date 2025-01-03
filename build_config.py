@@ -1,3 +1,4 @@
+from PyInstaller.building.build_main import Analysis, PYZ, EXE
 import os
 
 block_cipher = None
@@ -11,7 +12,7 @@ added_files = [
 
 a = Analysis(
     ['app.py'],
-    pathex=[os.path.abspath(SPECPATH)],
+    pathex=[os.path.abspath(os.getcwd())],  # SPECPATH 대신 os.getcwd() 사용
     binaries=[],
     datas=added_files,
     hiddenimports=[
@@ -48,5 +49,5 @@ exe = EXE(
     upx_exclude=[],
     runtime_tmpdir=None,
     console=True,
-    icon='assets/icon.ico' if os.path.exists('assets/icon.ico') else None
+    icon='assets/favicon.ico' if os.path.exists('assets/favicon.ico') else None
 )
