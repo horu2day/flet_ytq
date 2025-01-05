@@ -155,8 +155,7 @@ def main(page: ft.Page):
             selectable=True,
             extension_set=ft.MarkdownExtensionSet.COMMON_MARK,
             on_tap_link=lambda e: page.launch_url(e.data),
-            width=600,
-            height=600,
+            expand=True,
         )
     
     scrollable_answer = ft.Container(  # Container로 감싸기

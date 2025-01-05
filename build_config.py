@@ -49,5 +49,5 @@ exe = EXE(
     upx_exclude=[],
     runtime_tmpdir=None,
     console=True,
-    icon='assets/favicon.ico' if os.path.exists('assets/favicon.ico') else None
+    icon='assets/icon.ico' if os.path.exists('assets/icon.ico') else None
 )

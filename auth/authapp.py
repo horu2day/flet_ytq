@@ -34,12 +34,12 @@ class AuthApp:
             on_click=self.handle_google_login,
             style=ft.ButtonStyle(
                 color={
-                    ft.MaterialState.DEFAULT: ft.colors.WHITE,
-                    ft.MaterialState.HOVERED: ft.colors.WHITE,
+                    ft.ControlState.DEFAULT: ft.Colors.WHITE,
+                    ft.ControlState.HOVERED: ft.Colors.WHITE,
                 },
                 bgcolor={
-                    ft.MaterialState.DEFAULT: ft.colors.BLUE,
-                    ft.MaterialState.HOVERED: ft.colors.BLUE_700,
+                    ft.ControlState.DEFAULT: ft.Colors.BLUE,
+                    ft.ControlState.HOVERED: ft.Colors.BLUE_700,
                 },
             )
         )
@@ -78,7 +78,7 @@ class AuthApp:
             ),
             padding=ft.padding.all(30),
             border_radius=10,
-            bgcolor=ft.colors.WHITE,
+            bgcolor=ft.Colors.WHITE,
             shadow=ft.BoxShadow(
                 spread_radius=1,
                 blur_radius=15,
@@ -93,14 +93,32 @@ class AuthApp:
         self.status_text.value = "로그인 중..."
         self.status_text.update()
         try:
+            port = 8080
+            # 다른 프로세스가 해당 포트를 사용하는지 확인
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                sock.bind(('', port))
+                sock.close()
+            except OSError:
+                # 8080 포트가 사용 중이면 8081 사용
+                port = 8081
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.bind(('', port))
+                    sock.close()
+                except OSError:
+                    raise Exception(f"포트 {port}를 사용할 수 없습니다.")
             # OAuth 2.0 flow 생성
             secrets_file = get_resource_path("client_secrets.json")
             flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
                secrets_file , 
-                ['openid', 'https://www.googleapis.com/auth/userinfo.email']
+                ['openid', 'https://www.googleapis.com/auth/userinfo.email'],
+                redirect_uri="https://isircfpmirzzkotuyybd.supabase.co/auth/v1/callback"
             )
+            auth_url, _ = flow.authorization_url()
             # 로컬 서버로 인증
-            credentials = flow.run_local_server(port=8080)
+            credentials = flow.run_local_server(port=port)
             
             # ID 토큰 검증 및 획득
             request = requests.Request()
