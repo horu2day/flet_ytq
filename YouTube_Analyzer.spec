@@ -1,27 +1,28 @@
-from PyInstaller.building.build_main import Analysis, PYZ, EXE
+# -*- mode: python ; coding: utf-8 -*-
 import os
+import sys
+from PyInstaller.utils.hooks import collect_data_files, collect_all
 
 block_cipher = None
 
-# Required additional files
-added_files = [
-    ('client_secrets.json', '.'),
-    ('config.json', '.'),
-    ('assets/*', 'assets'),
-]
+# Flet 관련 모든 데이터 수집
+flet_datas, flet_binaries, flet_hiddenimports = collect_all('flet')
 
 a = Analysis(
     ['app.py'],
-    pathex=[os.path.abspath(os.getcwd())],  # SPECPATH 대신 os.getcwd() 사용
-    binaries=[],
-    datas=added_files,
+    pathex=[],
+    binaries=flet_binaries,  # Flet 바이너리 추가
+    datas=[
+        ('client_secrets.json', '.'),
+        ('config.json', '.'),
+        ('assets/*', 'assets'),
+    ] + flet_datas,  # Flet 데이터 파일 추가
     hiddenimports=[
-        'flet.web',
         'google.auth',
         'google_auth_oauthlib',
         'google.generativeai',
         'youtube_transcript_api'
-    ],
+    ] + flet_hiddenimports,  # Flet hidden imports 추가
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
