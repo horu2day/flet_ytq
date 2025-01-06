@@ -22,8 +22,12 @@ def main(page: ft.Page):
     auth_app.build(page)
 
 if __name__ == "__main__":
-    ft.app(target=main)  # 데스크톱 모드로 실행
-
+    try:
+        ft.app(target=main, view=ft.WEB_BROWSER, port=8081)
+    #ft.app(target=main)  # 데스크톱 모드로 실행
+    except Exception as e:
+        logging.error(f"Server error: {str(e)}")
+        raise
 
 ##########################################################################################
 # import flet as ft
