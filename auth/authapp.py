@@ -8,6 +8,7 @@ import jwt
 from auth.authmanager import JWT_SECRET, AuthManager
 from utils import get_resource_path
 
+
 class AuthApp:
     def __init__(self, auth_callback):
         self.auth_manager = AuthManager()
@@ -26,7 +27,7 @@ class AuthApp:
 
         # 상태 표시 텍스트
         self.status_text = ft.Text("", size=16)
-        
+
         # 로그인 버튼
         self.login_button = ft.ElevatedButton(
             text="Google로 로그인",
@@ -112,24 +113,24 @@ class AuthApp:
             # OAuth 2.0 flow 생성
             secrets_file = get_resource_path("client_secrets.json")
             flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
-               secrets_file , 
+                secrets_file,
                 ['openid', 'https://www.googleapis.com/auth/userinfo.email'],
                 redirect_uri="https://isircfpmirzzkotuyybd.supabase.co/auth/v1/callback"
             )
             auth_url, _ = flow.authorization_url()
             # 로컬 서버로 인증
             credentials = flow.run_local_server(port=port)
-            
+
             # ID 토큰 검증 및 획득
             request = requests.Request()
             id_info = id_token.verify_oauth2_token(
-                credentials.id_token, 
-                request, 
+                credentials.id_token,
+                request,
                 credentials.client_id
             )
             # Supabase 로그인
             token, user = await self.auth_manager.sign_in_with_google(credentials.id_token)
-            
+
             if token and user:
                 self.token = token
                 self.user = user
@@ -144,26 +145,30 @@ class AuthApp:
             self.status_text.value = "로그인 실패"
             self.status_text.update()
             self.auth_callback(None)  # 인증 실패 후 콜백 실행
+
     def update_ui_after_login(self):
         # 로그인 성공 후 UI 업데이트
         self.status_text.value = f"환영합니다, {self.user.email}!"
         self.login_button.visible = False
         self.subscription_container.visible = True
-        
-        subscription_data  = eval(jwt.decode(self.token, JWT_SECRET, algorithms=['HS256'])['subscription_type'])
-        self.subscription_container.content.controls[1].value = f"현재 구독: {subscription_data['subscription_type'].upper()}"
-        
+
+        subscription_data = eval(jwt.decode(
+            self.token, JWT_SECRET, algorithms=['HS256'])['subscription_type'])
+        self.subscription_container.content.controls[1].value = f"현재 구독: {
+            subscription_data['subscription_type'].upper()}"
+
         self.premium_button.visible = True
         self.premium_button.disabled = subscription_data['subscription_type'] != 'premium'
-        
+
         self.page.update()
 
     async def handle_premium_feature(self, e):
         if not self.token:
             return
-            
+
         try:
-            payload = eval(jwt.decode(self.token, JWT_SECRET, algorithms=['HS256'])['subscription_type'])
+            payload = eval(jwt.decode(self.token, JWT_SECRET,
+                           algorithms=['HS256'])['subscription_type'])
             if payload['subscription_type'] == 'premium':
                 # 프리미엄 기능 실행
                 self.status_text.value = "프리미엄 기능 실행 중..."

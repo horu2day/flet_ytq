@@ -6,6 +6,7 @@ from utils import setup_logging
 
 setup_logging()
 
+
 def main(page: ft.Page):
     def auth_callback(auth_token):
         try:
@@ -17,14 +18,15 @@ def main(page: ft.Page):
         except Exception as e:
             logging.error(f"Error in auth_callback: {str(e)}")
             page.add(ft.Text(f"오류가 발생했습니다: {str(e)}"))
-    
+
     auth_app = AuthApp(auth_callback)
     auth_app.build(page)
 
+
 if __name__ == "__main__":
     try:
-        ft.app(target=main, view=ft.WEB_BROWSER, port=8081)
-    #ft.app(target=main)  # 데스크톱 모드로 실행
+        ft.app(target=main, view=ft.WEB_BROWSER, port=8080)
+    # ft.app(target=main)  # 데스크톱 모드로 실행
     except Exception as e:
         logging.error(f"Server error: {str(e)}")
         raise
@@ -41,7 +43,7 @@ if __name__ == "__main__":
 #             youtube_app(page)  # 유튜브 앱 실행
 #         else:
 #             page.add(ft.Text("인증 실패"))  # 인증 실패시 에러 메시지 출력
-    
+
 #     auth_app = AuthApp(auth_callback)
 #     auth_app.build(page)
 
