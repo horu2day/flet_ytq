@@ -249,14 +249,31 @@ def main(page: ft.Page):
             transcript_data = transcript
                           # 요약 프롬프트
             summary_prompt = f"""
-            Transcript: "{transcript_data}"
+            “Here is a transcript of a video from a YouTube channel on [topic]. Please write a 5-7 page paper in Korean, not a simple summary of the video, but an in-depth analysis based on the following criteria:
 
-            Transcript 내용을 바탕으로 markdown 형식 으로 답변을 반환합니다.
-            * 다음 유튜브 영상의 주요 내용을 설명해주세요. 요약하지 말고 자세히 알려주세요.
-            * 이 유튜브 영상에서 다루는 핵심 주제와 정보는 무엇인가요? 간단히 요약하지 말고 상세히 설명해주세요.
-            * 이 유튜브 영상의 내용을 전체적으로 파악하고 싶습니다. 주요 포인트들을 빠짐없이 설명해주세요. 요약은 피해주시고 자세한 내용을 알려주세요.
-            * 이 유튜브 영상에서 전달하고자 하는 주요 메시지나 정보는 무엇인가요? 내용을 축소하지 말고 상세히 설명해주세요.
-            * 이 유튜브 영상의 내용을 처음부터 끝까지 자세히 설명해주세요. 중요한 정보나 세부사항을 생략하지 말고 모두 포함해주세요.
+            1. Analyze the structure of the content
+            - The connection and logical flow of the main concepts covered in the video
+            - Key points emphasized by the speaker and their context
+            - The practical implications that the examples or stories are trying to convey
+
+            2. nuance and context
+            - How the speaker's tone and emotional changes affect the content
+            - Why certain terms or expressions were chosen and their effectiveness
+            - Implied meaning that is not explicitly stated
+
+            3. in-depth analysis
+            - The evidence and validity of the argument or point of view presented
+            - Interrelationships and causal relationships between the content
+            - New insights or perspectives on the topic
+
+            4. practical application
+            - Real-world applicability of what was presented
+            - Key implications and lessons learned
+            - Directions or considerations for future development
+
+            Please fill out each section with specific examples and quotes to ensure that it is an insightful analysis and not just a list of information. Also, please organize the parts so that they flow together to form one complete document.
+
+            Transcript content: "{transcript_data}"
             """
             summary_response = model.generate_content(summary_prompt, stream=False)
             summary = summary_response.text.strip()
