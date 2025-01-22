@@ -9,6 +9,7 @@
             "args": [
                 "run",
                 "-r",
+                "-w",
                 "${workspaceFolder}/app.py"
             ],
             "console": "integratedTerminal",
@@ -21,7 +22,7 @@
             "name": "Flet: Run Debug",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/client/app.py",
+            "program": "${workspaceFolder}/app.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {

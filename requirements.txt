@@ -1,9 +1,11 @@
 flet==0.25.2
+flet-desktop==0.25.2
+requests==2.32.3
 google-auth==2.37.0
 google-auth-oauthlib==1.2.1
 google-generativeai==0.8.3
 youtube-transcript-api==0.6.3 
-requests==2.25.1
 PyJWT==2.10.1
 supabase==2.10.0
-pillow==10.2.0
+pillow==10.4.0
+Crawl4AI==0.4.247
