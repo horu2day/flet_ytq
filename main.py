@@ -10,7 +10,7 @@ import grpc
 import datetime  # 추가: 파일명에 날짜 추가
 import re  # 추가: 정규 표현식 모듈
 import yt_dlp
-from crawl4ai import *
+from crawl4ai import AsyncWebCrawler
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -46,7 +46,8 @@ def decrypt_api_key(encrypted_key, encryption_key):
     try:
         decrypted_key = f.decrypt(encrypted_key.encode())
         return decrypted_key.decode()
-    except:
+    except (Fernet.InvalidToken, TypeError, ValueError) as e:
+        print(f"Decryption error: {e}")
         return None
 
 # 암호화된 API 키를 로드하는 함수
@@ -144,29 +145,31 @@ generation_config = {
     "response_mime_type": "text/plain",
 }
 model = genai.GenerativeModel(
-    model_name="gemini-2.0-flash-exp",
+    # model_name="gemini-2.0-flash-exp",
+    model_name="gemini-2.0-flash-thinking-exp-01-21",
     generation_config=generation_config,
 )
+custom_instruction = ""
 # 커스텀 instruction 설정
-custom_instruction = """
-Begin by enclosing all thoughts within <thinking> tags, exploring multiple angles and approaches.
-Break down the solution into clear steps within <step> tags. Start with a 20-step budget, requesting more for complex problems if needed.
-Use <count> tags after each step to show the remaining budget. Stop when reaching 0.
-Continuously adjust your reasoning based on intermediate results and reflections, adapting your strategy as you progress.
-Regularly evaluate progress using <reflection> tags. Be critical and honest about your reasoning process.
-Assign a quality score between 0.0 and 1.0 using <reward> tags after each reflection. Use this to guide your approach:
+# custom_instruction = """
+# Begin by enclosing all thoughts within <thinking> tags, exploring multiple angles and approaches.
+# Break down the solution into clear steps within <step> tags. Start with a 20-step budget, requesting more for complex problems if needed.
+# Use <count> tags after each step to show the remaining budget. Stop when reaching 0.
+# Continuously adjust your reasoning based on intermediate results and reflections, adapting your strategy as you progress.
+# Regularly evaluate progress using <reflection> tags. Be critical and honest about your reasoning process.
+# Assign a quality score between 0.0 and 1.0 using <reward> tags after each reflection. Use this to guide your approach:
 
-0.8+: Continue current approach
-0.5-0.7: Consider minor adjustments
-Below 0.5: Seriously consider backtracking and trying a different approach
+# 0.8+: Continue current approach
+# 0.5-0.7: Consider minor adjustments
+# Below 0.5: Seriously consider backtracking and trying a different approach
 
-If unsure or if reward score is low, backtrack and try a different approach, explaining your decision within <thinking> tags.
-For mathematical problems, show all work explicitly using LaTeX for formal notation and provide detailed proofs.
-Explore multiple solutions individually if possible, comparing approaches in reflections.
-Use thoughts as a scratchpad, writing out all calculations and reasoning explicitly.
-Synthesize the final answer within <answer> tags, providing a clear, concise summary.
-Conclude with a final reflection on the overall solution, discussing effectiveness, challenges, and solutions. Assign a final reward score.
-"""
+# If unsure or if reward score is low, backtrack and try a different approach, explaining your decision within <thinking> tags.
+# For mathematical problems, show all work explicitly using LaTeX for formal notation and provide detailed proofs.
+# Explore multiple solutions individually if possible, comparing approaches in reflections.
+# Use thoughts as a scratchpad, writing out all calculations and reasoning explicitly.
+# Synthesize the final answer within <answer> tags, providing a clear, concise summary.
+# Conclude with a final reflection on the overall solution, discussing effectiveness, challenges, and solutions. Assign a final reward score.
+# """
 
 CATEGORY_MAP = """
 1. 콘텐츠 유형 기반 분류:
@@ -469,8 +472,8 @@ def save_markdown_file(content, video_url, filename_prefix="output"):
 
 def main(page: ft.Page):
     page.title = "Youtube 내용이 궁금해!"
-    page.window.width = 800
-    page.window.height = 800
+    page.window.width = 860
+    page.window.height = 1080
     page.window.left = 10
     page.window.top = 10
     page.vertical_alignment = ft.MainAxisAlignment.START
@@ -560,15 +563,25 @@ def main(page: ft.Page):
         thumbnail_display.src = thumbnail_url
         thumbnail_display.update()  # 이미지 업데이트
         try:
+
             transcript = YouTubeTranscriptApi.get_transcript(
                 video_id, languages=['ko', 'en'])
             transcript_data = transcript
+            answer_text.value = "스크립트 추출완료: "
+            page.update()  # UI 업데이트
 
             markdown_result, question, answer = generate_question_and_answer(
-                extracted_text, transcript)  # 수정: markdown 결과 받기
+                extracted_text, transcript)
+            answer_text.value = "generate_question_and_answer함수완료 "
+            page.update()  # UI 업데이트
+
+            # 수정: markdown 결과 받기
             if markdown_result:
                 filename = save_markdown_file(
                     markdown_result, url, "question_answer")  # 추가: 마크다운 파일 저장
+                answer_text.value = "save_markdown_file함수완료 "
+                page.update()  # UI 업데이트
+
                 answer_text.value = markdown_result  # 수정: 마크다운 결과 출력
                 page.overlay.append(
                     ft.SnackBar(
@@ -580,9 +593,9 @@ def main(page: ft.Page):
             answer_text.value = f"{answer}"
             page.update()  # UI 업데이트
         except Exception as e:
-            question_field.value = f"오류 발생: {e}"
-            answer_text.value = ""
-            page.update()
+            question_field.value = f"오류: {e}"
+            # answer_text.value = ""
+            # page.update()
 
     def re_answer(e):
         nonlocal extracted_text_data, transcript_data
@@ -640,10 +653,10 @@ def main(page: ft.Page):
             summary_response = model.generate_content(
                 summary_prompt, stream=False)
 
-            summary_text = extract_answer_from_xml(
-                summary_response.text.strip())
+            # summary_text = extract_answer_from_xml(
+            #     summary_response.text.strip())
 
-            # summary = summary_response.text.strip()
+            summary_text = summary_response.text.strip()
 
             filename = save_markdown_file(
                 summary_text, url, "summary")  # 추가: 마크다운 파일 저장

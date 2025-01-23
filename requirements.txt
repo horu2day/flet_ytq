@@ -9,3 +9,4 @@ PyJWT==2.10.1
 supabase==2.10.0
 pillow==10.4.0
 Crawl4AI==0.4.247
+yt-dlp==2025.1.15
