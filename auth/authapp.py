@@ -21,7 +21,8 @@ class AuthApp:
 
     def build(self, page: ft.Page):
         self.page = page
-        page.title = "로그인"
+        page.title = "유튜브중독자"
+        page.icon = get_resource_path("icon.ico")
         page.vertical_alignment = ft.MainAxisAlignment.CENTER
         page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         page.theme_mode = ft.ThemeMode.LIGHT
@@ -71,7 +72,7 @@ class AuthApp:
         main_container = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Text("Login", size=32, weight=ft.FontWeight.BOLD),
+                    ft.Text("로그인", size=32, weight=ft.FontWeight.BOLD),
                     self.status_text,
                     self.login_button,
                     self.subscription_container,
@@ -139,7 +140,7 @@ class AuthApp:
 
                     # ID 토큰 검증 및 획득
                     request = requests.Request()
-                    id_info = id_token.verify_oauth2_token(
+                    id_token.verify_oauth2_token(
                         credentials.id_token,
                         request,
                         credentials.client_id

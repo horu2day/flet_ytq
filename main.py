@@ -1,3 +1,4 @@
+import sys
 import flet as ft
 import google.generativeai as genai
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -16,6 +17,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
 import base64
+import logging
 
 # 키 생성 및 암호화 함수
 GOOGLE_API_KEY = None
@@ -46,7 +48,7 @@ def decrypt_api_key(encrypted_key, encryption_key):
     try:
         decrypted_key = f.decrypt(encrypted_key.encode())
         return decrypted_key.decode()
-    except (Fernet.InvalidToken, TypeError, ValueError) as e:
+    except Exception as e:
         print(f"Decryption error: {e}")
         return None
 
@@ -54,17 +56,33 @@ def decrypt_api_key(encrypted_key, encryption_key):
 
 
 def load_api_key(encryption_key):
-    config_file = "config.json"
+    # 실행 파일로 번들링된 경우 _MEIPASS 사용, 디버깅 환경에서는 현재 디렉토리 사용
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        config_file = os.path.join(sys._MEIPASS, "config.json")
+        logging.info(f"_MEIPASS 사용: {config_file}")  # 로그 추가
+    else:
+        config_file = "config.json"
+        logging.info(f"현재 디렉토리 사용: {config_file}")  # 로그 추가
+
+    logging.info(f"config_file 경로 확인: {config_file}")  # 로그 추가 (파일 경로 확인)
+
     if os.path.exists(config_file):
+        logging.info("config.json 파일 존재 확인")  # 로그 추가 (파일 존재 여부 확인)
         try:
             with open(config_file, "r") as f:
                 config = json.load(f)
+                logging.info(f"encrypted_api_key: {config.get('api_key')}")
+                logging.info(f"인증 오류: {encryption_key}")
                 encrypted_api_key = config.get("api_key")
                 if encrypted_api_key:
                     return decrypt_api_key(encrypted_api_key, encryption_key)
                 return None
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            logging.error(f"JSONDecodeError 발생: {e}")  # JSONDecodeError 로그 추가
             return None
+    else:
+        logging.warning("config.json 파일 찾을 수 없음")  # 파일 없을 때 로그 추가
+        return None
     return None
 
 
@@ -106,7 +124,7 @@ def initialize_api(password):
 # setup_config(api_key, password)
 
 # 프로그램 시작 시 API 키 로드 및 설정
-password_for_load = "3700"
+password_for_load = "yt2b"
 initialize_api(password_for_load)
 
 # def load_api_key():
@@ -145,31 +163,31 @@ generation_config = {
     "response_mime_type": "text/plain",
 }
 model = genai.GenerativeModel(
-    # model_name="gemini-2.0-flash-exp",
-    model_name="gemini-2.0-flash-thinking-exp-01-21",
+    model_name="gemini-2.0-flash-exp",
+    # model_name="gemini-2.0-flash-thinking-exp-01-21",
     generation_config=generation_config,
 )
-custom_instruction = ""
+# custom_instruction = ""
 # 커스텀 instruction 설정
-# custom_instruction = """
-# Begin by enclosing all thoughts within <thinking> tags, exploring multiple angles and approaches.
-# Break down the solution into clear steps within <step> tags. Start with a 20-step budget, requesting more for complex problems if needed.
-# Use <count> tags after each step to show the remaining budget. Stop when reaching 0.
-# Continuously adjust your reasoning based on intermediate results and reflections, adapting your strategy as you progress.
-# Regularly evaluate progress using <reflection> tags. Be critical and honest about your reasoning process.
-# Assign a quality score between 0.0 and 1.0 using <reward> tags after each reflection. Use this to guide your approach:
+custom_instruction = """
+Begin by enclosing all thoughts within <thinking> tags, exploring multiple angles and approaches.
+Break down the solution into clear steps within <step> tags. Start with a 20-step budget, requesting more for complex problems if needed.
+Use <count> tags after each step to show the remaining budget. Stop when reaching 0.
+Continuously adjust your reasoning based on intermediate results and reflections, adapting your strategy as you progress.
+Regularly evaluate progress using <reflection> tags. Be critical and honest about your reasoning process.
+Assign a quality score between 0.0 and 1.0 using <reward> tags after each reflection. Use this to guide your approach:
 
-# 0.8+: Continue current approach
-# 0.5-0.7: Consider minor adjustments
-# Below 0.5: Seriously consider backtracking and trying a different approach
+0.8+: Continue current approach
+0.5-0.7: Consider minor adjustments
+Below 0.5: Seriously consider backtracking and trying a different approach
 
-# If unsure or if reward score is low, backtrack and try a different approach, explaining your decision within <thinking> tags.
-# For mathematical problems, show all work explicitly using LaTeX for formal notation and provide detailed proofs.
-# Explore multiple solutions individually if possible, comparing approaches in reflections.
-# Use thoughts as a scratchpad, writing out all calculations and reasoning explicitly.
-# Synthesize the final answer within <answer> tags, providing a clear, concise summary.
-# Conclude with a final reflection on the overall solution, discussing effectiveness, challenges, and solutions. Assign a final reward score.
-# """
+If unsure or if reward score is low, backtrack and try a different approach, explaining your decision within <thinking> tags.
+For mathematical problems, show all work explicitly using LaTeX for formal notation and provide detailed proofs.
+Explore multiple solutions individually if possible, comparing approaches in reflections.
+Use thoughts as a scratchpad, writing out all calculations and reasoning explicitly.
+Synthesize the final answer within <answer> tags, providing a clear, concise summary.
+Conclude with a final reflection on the overall solution, discussing effectiveness, challenges, and solutions. Assign a final reward score.
+"""
 
 CATEGORY_MAP = """
 1. 콘텐츠 유형 기반 분류:
@@ -239,6 +257,7 @@ def generate_question_and_answer(extracted_text, transcript, question=None):
             """
             question_response = model.generate_content(
                 question_prompt, stream=False)  # 추가
+
             question_text = question_response.text.strip()
 
         # 답변 찾기 프롬프트
@@ -471,6 +490,7 @@ def save_markdown_file(content, video_url, filename_prefix="output"):
 
 
 def main(page: ft.Page):
+    pw = "yt2b"
     page.title = "Youtube 내용이 궁금해!"
     page.window.width = 860
     page.window.height = 1080
@@ -479,9 +499,10 @@ def main(page: ft.Page):
     page.vertical_alignment = ft.MainAxisAlignment.START
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
-    api_key_field = ft.TextField(label="Google API Key", password=True,
-                                 width=300, value=GOOGLE_API_KEY if GOOGLE_API_KEY else "")
-    url_field = ft.TextField(label="YouTube URL", width=450)
+    # api_key_field = ft.TextField(label="Google API Key", password=True,
+    #                              width=300, value=pw if pw else "")
+    # url_field = ft.TextField(label="YouTube URL", width=450)
+    url_field = ft.TextField(label="YouTube URL", width=600)
 
     def question_field_on_submit(e):
         re_answer(e)
@@ -491,12 +512,6 @@ def main(page: ft.Page):
         """""",
         selectable=True,
     )
-    # answer_text = ft.Markdown(
-    #     """""",
-    #     selectable=True,
-    #     extension_set=ft.MarkdownExtensionSet.COMMON_MARK,
-    #     on_tap_link=lambda e: page.launch_url(e.data),
-    # )
     scrollable_answer = ft.Container(  # Container로 감싸기
         content=ft.Column(  # Column으로 감싸기
             [answer_text],
@@ -522,6 +537,9 @@ def main(page: ft.Page):
         border_radius=ft.border_radius.all(10),
     )  # 이미지 초기화
 
+    api_key_field = ft.TextField(
+        label="Google API Key", value=pw, password=True, width=300)
+
     def save_key(e):
         global GOOGLE_API_KEY
         key = api_key_field.value
@@ -541,6 +559,27 @@ def main(page: ft.Page):
         else:
             page.snack_bar = ft.SnackBar(ft.Text("API 키를 입력해주세요."), open=True)
             page.update()
+
+    def close_dlg(e):
+        settings_dlg.open = False
+        page.update()
+
+    settings_dlg = ft.AlertDialog(
+        modal=True,
+        title=ft.Text("설정"),
+        content=ft.Column([api_key_field,
+                           ft.ElevatedButton("API 키 저장", on_click=save_key)],
+                          tight=True),
+        actions=[
+            ft.TextButton("닫기", on_click=close_dlg),
+        ],
+        actions_alignment=ft.MainAxisAlignment.END,
+    )
+
+    def open_dlg_settings(e):
+        page.dialog = settings_dlg
+        settings_dlg.open = True  # 다이얼로그를 열어주는 코드 추가
+        page.update()
 
     def extract_info(e):
         nonlocal extracted_text_data, transcript_data, thumbnail_display
@@ -653,10 +692,10 @@ def main(page: ft.Page):
             summary_response = model.generate_content(
                 summary_prompt, stream=False)
 
-            # summary_text = extract_answer_from_xml(
-            #     summary_response.text.strip())
+            summary_text = extract_answer_from_xml(
+                summary_response.text.strip())
 
-            summary_text = summary_response.text.strip()
+            # summary_text = summary_response.text.strip()
 
             filename = save_markdown_file(
                 summary_text, url, "summary")  # 추가: 마크다운 파일 저장
@@ -703,8 +742,8 @@ def main(page: ft.Page):
                 makemarkdownforurl(url)
 
     top_widgets = ft.Column([  # Column 위젯으로 묶기
-        api_key_field,
-        ft.ElevatedButton("API 키 저장", on_click=save_key),
+        # api_key_field,
+        # ft.ElevatedButton("API 키 저장", on_click=save_key),
         url_field,
         ft.Row(
             [
@@ -724,8 +763,27 @@ def main(page: ft.Page):
         ),
     ])
 
-    page.add(
+    page.appbar = ft.AppBar(
+        leading=ft.Icon(ft.Icons.YOUTUBE_SEARCHED_FOR_ROUNDED),
+        leading_width=40,
+        title=ft.Text("Youtube 내용이 궁금해!"),
+        center_title=False,
+        bgcolor=ft.colors.SURFACE_VARIANT,
+        actions=[
+            ft.PopupMenuButton(
+                items=[
+                    ft.PopupMenuItem(text="설정", on_click=open_dlg_settings),
+                    ft.PopupMenuItem(),  # divider
+                    ft.PopupMenuItem(
+                        text="종료",
+                        on_click=lambda _: page.window_close(),
+                    ),
+                ]
+            ),
+        ],
+    )
 
+    page.add(  # page.appbar 밖에 있어야 합니다.
         ft.Column([
             ft.Row([
                 top_widgets,
@@ -735,7 +793,7 @@ def main(page: ft.Page):
                 content=scrollable_answer,
                 expand=True,
             ),
-        ]),
+        ])
     )
 
 
