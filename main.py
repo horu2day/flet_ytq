@@ -454,6 +454,7 @@ def save_markdown_file(content, video_url, filename_prefix="output"):
         filename = f"{filename_prefix}_{timestamp}.md"
         #  프론트 매터 생성
         frontmatter = generate_frontmatter(content, video_url)
+        print(filename)
         with open(filename, "w", encoding="utf-8") as f:
             f.write(frontmatter)
             f.write("\n")
@@ -502,7 +503,7 @@ def main(page: ft.Page):
     # api_key_field = ft.TextField(label="Google API Key", password=True,
     #                              width=300, value=pw if pw else "")
     # url_field = ft.TextField(label="YouTube URL", width=450)
-    url_field = ft.TextField(label="YouTube URL", width=600)
+    url_field = ft.TextField(label="YouTube URL", width=450)
 
     def question_field_on_submit(e):
         re_answer(e)
@@ -516,7 +517,7 @@ def main(page: ft.Page):
         content=ft.Column(  # Column으로 감싸기
             [answer_text],
             scroll=ft.ScrollMode.ALWAYS,
-            height=800
+            height=600
         ),
 
         border=ft.border.all(1, ft.Colors.GREY_300),
@@ -768,7 +769,7 @@ def main(page: ft.Page):
         leading_width=40,
         title=ft.Text("Youtube 내용이 궁금해!"),
         center_title=False,
-        bgcolor=ft.colors.SURFACE_VARIANT,
+        bgcolor=ft.Colors.GREY_100,
         actions=[
             ft.PopupMenuButton(
                 items=[
