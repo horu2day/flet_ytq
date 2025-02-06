@@ -18,10 +18,12 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
 import base64
 import logging
+# 변경 1: FilePicker 임포트 추가 (상단 임포트 섹션에 추가)
+from flet import FilePicker, FilePickerResultEvent
 
 # 키 생성 및 암호화 함수
 GOOGLE_API_KEY = None
-
+DOWNLOAD_DIR = os.getcwd()  # 기본값은 현재 작업 디렉토리
 
 def generate_key(password: str):
     password = password.encode()
@@ -87,11 +89,13 @@ def load_api_key(encryption_key):
 
 
 # API 키를 암호화하여 저장하는 함수
-def save_api_key(api_key, encryption_key):
-    config_file = "config.json"
+def save_config(api_key, download_dir, encryption_key):
     encrypted_api_key = encrypt_api_key(api_key, encryption_key)
-    config = {"api_key": encrypted_api_key}
-    with open(config_file, "w") as f:
+    config = {
+        "api_key": encrypted_api_key,
+        "download_dir": download_dir
+    }
+    with open("config.json", "w") as f:
         json.dump(config, f)
 
 
@@ -101,20 +105,38 @@ def setup_config(api_key, password):
     save_api_key(api_key, encryption_key)
     print("config.json 파일이 생성되고 API 키가 암호화되어 저장되었습니다.")
 
+def load_config(encryption_key):
+    config_file = "config.json"
+    if os.path.exists(config_file):
+        try:
+            with open(config_file, "r") as f:
+                config = json.load(f)
+                decrypted_api_key = decrypt_api_key(config.get("api_key"), encryption_key)
+                return {
+                    "api_key": decrypted_api_key,
+                    "download_dir": config.get("download_dir", os.getcwd())
+                }
+        except json.JSONDecodeError as e:
+            print(f"Config load error: {e}")
+            return None
+    return None
 
 # 2. 프로그램 시작 시 API 키 로드 및 설정
+# 변경 4: initialize_api 함수 수정
 def initialize_api(password):
+    global DOWNLOAD_DIR
     encryption_key = generate_key(password)
-    GOOGLE_API_KEY = load_api_key(encryption_key)
+    config = load_config(encryption_key)
 
-    if GOOGLE_API_KEY:
+    if config and config["api_key"]:
         try:
-            genai.configure(api_key=GOOGLE_API_KEY)
-            print("API 키가 성공적으로 로드되었습니다.")
+            genai.configure(api_key=config["api_key"])
+            DOWNLOAD_DIR = config["download_dir"]  # 설정에서 다운로드 디렉토리 불러오기
+            print("API 키 및 설정이 성공적으로 로드되었습니다.")
         except Exception as e:
             print("API 키 설정 오류:", e)
     else:
-        print("API 키를 로드하는데 실패했습니다. config.json 파일을 확인해 주세요.")
+        print("설정 로드에 실패했습니다. config.json 파일을 확인해 주세요.")
 
 
 # 초기 설정 (최초 1회 실행)
@@ -140,11 +162,11 @@ initialize_api(password_for_load)
 # # API 키를 저장하는 함수
 
 
-# def save_api_key(api_key):
-#     config_file = "config.json"
-#     config = {"api_key": api_key}
-#     with open(config_file, "w") as f:
-#         json.dump(config, f)
+def save_api_key(api_key):
+    config_file = "config.json"
+    config = {"api_key": api_key}
+    with open(config_file, "w") as f:
+        json.dump(config, f)
 
 
 # # API 키 초기화
@@ -445,6 +467,7 @@ def generate_frontmatter(content, url):
 
 
 def save_markdown_file(content, video_url, filename_prefix="output"):
+    global DOWNLOAD_DIR
     """마크다운 파일을 저장하고 파일 경로를 반환합니다."""
     channel_name, video_title = get_channel_and_title(video_url)
 
@@ -454,7 +477,7 @@ def save_markdown_file(content, video_url, filename_prefix="output"):
         filename = f"{filename_prefix}_{timestamp}.md"
         #  프론트 매터 생성
         frontmatter = generate_frontmatter(content, video_url)
-        print(filename)
+
         with open(filename, "w", encoding="utf-8") as f:
             f.write(frontmatter)
             f.write("\n")
@@ -468,8 +491,8 @@ def save_markdown_file(content, video_url, filename_prefix="output"):
     timestamp = now.strftime("%Y%m%d_%H%M%S")
     filename = f"{sanitized_video_title}_{timestamp}.md"
 
-    path = os.path.join(".", sanitized_channel_name)
-
+    
+    path = os.path.join(DOWNLOAD_DIR, sanitized_channel_name)  # 전역 DOWNLOAD_DIR 사용
     if not os.path.exists(path):  # 채널 이름 폴더가 없으면 생성
         os.makedirs(path, exist_ok=True)
 
@@ -482,17 +505,21 @@ def save_markdown_file(content, video_url, filename_prefix="output"):
     frontmatter = generate_frontmatter(content, video_url)
     frontmatter = frontmatter.lstrip('\n')
     frontmatter = frontmatter.strip('```').lstrip('\n')
-    with open(full_path, "w", encoding="utf-8") as f:
-        f.write(frontmatter)
-        f.write("\n")
-        f.write(content)
-
+    try:
+        with open(full_path, "w", encoding="utf-8") as f:
+            f.write(frontmatter)
+            f.write("\n")
+            f.write(content)
+    except Exception as e:
+        print(f"파일 저장 오류: {e}")
+        return None
+    
     return full_path
 
 
 def main(page: ft.Page):
     pw = "yt2b"
-    page.title = "Youtube 내용이 궁금해!"
+    page.title = "유튜브 중독자"
     page.window.width = 860
     page.window.height = 1080
     page.window.left = 10
@@ -500,10 +527,20 @@ def main(page: ft.Page):
     page.vertical_alignment = ft.MainAxisAlignment.START
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
-    # api_key_field = ft.TextField(label="Google API Key", password=True,
-    #                              width=300, value=pw if pw else "")
-    # url_field = ft.TextField(label="YouTube URL", width=450)
-    url_field = ft.TextField(label="YouTube URL", width=450)
+
+    url_field = ft.TextField(label="YouTube URL", width=450, hint_text="복사후 더블클릭")
+    
+    
+    def paste_on_double_click(e):
+        if url_field.value == "" or url_field.value == url_field.placeholder:
+            async def get_clipboard_and_paste():
+                clipboard_content = await page.get_clipboard()
+                if clipboard_content:
+                    url_field.value = clipboard_content
+                    page.update()
+            page.spawn_async(get_clipboard_and_paste)
+
+    url_field.on_focus = paste_on_double_click # on_focus 이벤트 핸들러 설정
 
     def question_field_on_submit(e):
         re_answer(e)
@@ -541,41 +578,83 @@ def main(page: ft.Page):
     api_key_field = ft.TextField(
         label="Google API Key", value=pw, password=True, width=300)
 
-    def save_key(e):
-        global GOOGLE_API_KEY
-        key = api_key_field.value
-        if key:
-            save_api_key(key)
-            GOOGLE_API_KEY = key
-            try:
-                genai.configure(api_key=GOOGLE_API_KEY)
-            except Exception as e:
-                print("API 키 설정 오류:", e)
-                page.snack_bar = ft.SnackBar(
-                    ft.Text(f"API 키 설정 오류: {e}"), open=True)
-                page.update()
-            else:
-                page.snack_bar = ft.SnackBar(ft.Text("API 키 저장 완료"), open=True)
-                page.update()
-        else:
-            page.snack_bar = ft.SnackBar(ft.Text("API 키를 입력해주세요."), open=True)
-            page.update()
+
+    # def save_key(e):
+    #     global GOOGLE_API_KEY
+    #     key = api_key_field.value
+    #     if key:
+    #         save_api_key(key)
+    #         GOOGLE_API_KEY = key
+    #         try:
+    #             genai.configure(api_key=GOOGLE_API_KEY)
+    #         except Exception as e:
+    #             print("API 키 설정 오류:", e)
+    #             page.snack_bar = ft.SnackBar(
+    #                 ft.Text(f"API 키 설정 오류: {e}"), open=True)
+    #             page.update()
+    #         else:
+    #             page.snack_bar = ft.SnackBar(ft.Text("API 키 저장 완료"), open=True)
+    #             page.update()
+    #     else:
+    #         page.snack_bar = ft.SnackBar(ft.Text("API 키를 입력해주세요."), open=True)
+    #         page.update()
 
     def close_dlg(e):
         settings_dlg.open = False
         page.update()
 
+    def save_settings(e):
+        global GOOGLE_API_KEY, DOWNLOAD_DIR
+        encryption_key = generate_key(password_for_load)
+        new_api_key = api_key_field.value
+        new_download_dir = download_dir_field.value
+
+        # 설정 저장
+        save_config(new_api_key, new_download_dir, encryption_key)
+        
+        # 전역 변수 업데이트
+        GOOGLE_API_KEY = new_api_key
+        DOWNLOAD_DIR = new_download_dir
+        genai.configure(api_key=GOOGLE_API_KEY)
+        
+        page.snack_bar = ft.SnackBar(ft.Text("설정 저장 완료"), open=True)
+        page.update()
+
+    download_dir_field = ft.TextField(
+        label="다운로드 폴더", 
+        value=DOWNLOAD_DIR, 
+        width=450,
+
+    )
+
     settings_dlg = ft.AlertDialog(
         modal=True,
         title=ft.Text("설정"),
-        content=ft.Column([api_key_field,
-                           ft.ElevatedButton("API 키 저장", on_click=save_key)],
-                          tight=True),
+        content=ft.Column([
+            api_key_field,
+            ft.Row([
+                download_dir_field,
+                ft.ElevatedButton(
+                    "폴더 선택",
+                    on_click=lambda _: picker.get_directory_path()
+                )
+            ]), # Row에 expand=True 추가
+            ft.ElevatedButton("설정 저장", on_click=save_settings)
+        ], tight=True, width=550),
         actions=[
             ft.TextButton("닫기", on_click=close_dlg),
         ],
         actions_alignment=ft.MainAxisAlignment.END,
     )
+    def on_dialog_result(e: FilePickerResultEvent):
+        if e.path:
+            download_dir_field.value = e.path
+            page.update()
+
+    picker = FilePicker(on_result=on_dialog_result)
+    page.overlay.append(picker)
+
+    
 
     def open_dlg_settings(e):
         page.dialog = settings_dlg
@@ -607,19 +686,20 @@ def main(page: ft.Page):
             transcript = YouTubeTranscriptApi.get_transcript(
                 video_id, languages=['ko', 'en'])
             transcript_data = transcript
-            answer_text.value = "스크립트 추출완료: "
+            answer_text.value = "30 : 유튜브 내용을 추출하였습니다. "
             page.update()  # UI 업데이트
 
             markdown_result, question, answer = generate_question_and_answer(
                 extracted_text, transcript)
-            answer_text.value = "generate_question_and_answer함수완료 "
+            answer_text.value = "50: 질문을 생성하고 답변을 가져옵니다."
+            question_field.value = question
             page.update()  # UI 업데이트
 
             # 수정: markdown 결과 받기
             if markdown_result:
                 filename = save_markdown_file(
                     markdown_result, url, "question_answer")  # 추가: 마크다운 파일 저장
-                answer_text.value = "save_markdown_file함수완료 "
+                answer_text.value = "80: 답변을 저장합니다."
                 page.update()  # UI 업데이트
 
                 answer_text.value = markdown_result  # 수정: 마크다운 결과 출력
@@ -629,7 +709,7 @@ def main(page: ft.Page):
             else:
                 answer_text.value = "질문/답변 생성 실패"
 
-            question_field.value = question
+            
             answer_text.value = f"{answer}"
             page.update()  # UI 업데이트
         except Exception as e:
@@ -748,9 +828,9 @@ def main(page: ft.Page):
         url_field,
         ft.Row(
             [
-                ft.ElevatedButton("추출하기", on_click=extract_info),
-                ft.ElevatedButton("요약정리", on_click=summarize_answer),
-                ft.ElevatedButton("Youtubook", on_click=create_youtubook),
+                ft.ElevatedButton("궁금해서 못참아!", on_click=extract_info),
+                ft.ElevatedButton("요약하지말고 노트필기", on_click=summarize_answer),
+                ft.ElevatedButton("지식백과만들기[옵시디언]", on_click=create_youtubook),
             ],
 
             alignment=ft.MainAxisAlignment.CENTER,
@@ -767,9 +847,9 @@ def main(page: ft.Page):
     page.appbar = ft.AppBar(
         leading=ft.Icon(ft.Icons.YOUTUBE_SEARCHED_FOR_ROUNDED),
         leading_width=40,
-        title=ft.Text("Youtube 내용이 궁금해!"),
+        title=ft.Text("유튜브 중독자"),
         center_title=False,
-        bgcolor=ft.Colors.GREY_100,
+        bgcolor=ft.colors.SURFACE_VARIANT,
         actions=[
             ft.PopupMenuButton(
                 items=[
