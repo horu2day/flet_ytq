@@ -7,10 +7,11 @@ from PIL import Image
 import io
 import os
 import json
+import grpc
 import datetime  # 추가: 파일명에 날짜 추가
 import re  # 추가: 정규 표현식 모듈
 import yt_dlp
-# from crawl4ai import AsyncWebCrawler #crawl4ai 삭제
+from crawl4ai import AsyncWebCrawler
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -298,6 +299,9 @@ def generate_question_and_answer(extracted_text, transcript, question=None):
         return markdown_result, question_text, answer
 
         # return question_text, answer
+    except grpc.RpcError as e:
+        print(f"gRPC 오류 발생: {e}")
+        return None, None
     except Exception as e:
         print(f"오류 발생: {e}")
         return None, None
@@ -772,7 +776,6 @@ def main(page: ft.Page):
             summary_text = extract_answer_from_xml(
                 summary_response.text.strip())
 
-            # summary_text = summary_
             # summary_text = summary_response.text.strip()
 
             filename = save_markdown_file(
@@ -788,42 +791,36 @@ def main(page: ft.Page):
             answer_text.value = ""
             page.update()
 
-    # async def create_youtubook(e):
-    #     channel_url = url_field.value
-    #     async with AsyncWebCrawler() as crawler: #AsyncWebCrawler 삭제
-    #         result = await crawler.arun(
-    #             url=channel_url,
-    #         )
-    #         print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-    #         print(result.markdown)
-    #         print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    async def create_youtubook(e):
+        channel_url = url_field.value
+        async with AsyncWebCrawler() as crawler:
+            result = await crawler.arun(
+                url=channel_url,
+            )
+            print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            print(result.markdown)
+            print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-    #         # 정규 표현식을 사용하여 '/watch?v=...' 패턴 찾기
-    #         pattern = r"/watch\?v=[a-zA-Z0-9_-]+"
-    #         matches = re.findall(pattern, result.markdown)
+            # 정규 표현식을 사용하여 '/watch?v=...' 패턴 찾기
+            pattern = r"/watch\?v=[a-zA-Z0-9_-]+"
+            matches = re.findall(pattern, result.markdown)
 
-    #         # 찾은 패턴을 사용하여 전체 URL 생성
-    #         base_url = "https://www.youtube.com"
-    #         youtube_urls = [f"{base_url}{match}" for match in matches]
+            # 찾은 패턴을 사용하여 전체 URL 생성
+            base_url = "https://www.youtube.com"
+            youtube_urls = [f"{base_url}{match}" for match in matches]
 
-    #         # 중복 제거 및 순서 유지
-    #         unique_urls = []
-    #         seen = set()
-    #         for url in youtube_urls:
-    #             if url not in seen:
-    #                 unique_urls.append(url)
-    #                 seen.add(url)
+            # 중복 제거 및 순서 유지
+            unique_urls = []
+            seen = set()
+            for url in youtube_urls:
+                if url not in seen:
+                    unique_urls.append(url)
+                    seen.add(url)
 
-    #         # 결과 출력
-    #         print("YouTube URLs:")
-    #         for url in unique_urls:
-    #             makemarkdownforurl(url)
-    
-    def create_youtubook(e):
-      # crawl4ai 삭제
-      page.snack_bar = ft.SnackBar(ft.Text("지식백과 만들기 기능은 삭제되었습니다."), open=True)
-      page.update()
-
+            # 결과 출력
+            print("YouTube URLs:")
+            for url in unique_urls:
+                makemarkdownforurl(url)
 
     top_widgets = ft.Column([  # Column 위젯으로 묶기
         # api_key_field,
@@ -882,4 +879,4 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
-    ft.app(target=main)            
+    ft.app(target=main)
