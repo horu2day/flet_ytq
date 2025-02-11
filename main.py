@@ -191,7 +191,7 @@ Conclude with a final reflection on the overall solution, discussing effectivene
 
 CATEGORY_MAP = """
 1. 콘텐츠 유형 기반 분류:
-ㅌ (Education): 강의, 강연, 튜토리얼, 설명 영상 등
+교육 (Education): 강의, 강연, 튜토리얼, 설명 영상 등
 엔터테인먼트 (Entertainment): 코미디, 드라마, 뮤직비디오, 영화 리뷰, 게임 영상 등
 정보 (Information): 뉴스, 시사, 다큐멘터리, 인터뷰, 리뷰 등
 브이로그 (Vlog): 일상 기록, 여행, 챌린지 등
@@ -363,7 +363,7 @@ def extract_answer_from_xml(xml_string):
     if match:
         return match.group(1).strip()
 
-    return ""
+    return xml_string
 
 
 def extract_properties_and_values(content, url):
