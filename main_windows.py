@@ -7,10 +7,11 @@ from PIL import Image
 import io
 import os
 import json
+import grpc
 import datetime  # 추가: 파일명에 날짜 추가
 import re  # 추가: 정규 표현식 모듈
 import yt_dlp
-# from crawl4ai import AsyncWebCrawler #crawl4ai 삭제
+from crawl4ai import AsyncWebCrawler
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -212,7 +213,7 @@ Conclude with a final reflection on the overall solution, discussing effectivene
 
 CATEGORY_MAP = """
 1. 콘텐츠 유형 기반 분류:
-교육 (Education): 강의, 강연, 튜토리얼, 설명 영상 등
+ㅌ (Education): 강의, 강연, 튜토리얼, 설명 영상 등
 엔터테인먼트 (Entertainment): 코미디, 드라마, 뮤직비디오, 영화 리뷰, 게임 영상 등
 정보 (Information): 뉴스, 시사, 다큐멘터리, 인터뷰, 리뷰 등
 브이로그 (Vlog): 일상 기록, 여행, 챌린지 등
@@ -298,6 +299,9 @@ def generate_question_and_answer(extracted_text, transcript, question=None):
         return markdown_result, question_text, answer
 
         # return question_text, answer
+    except grpc.RpcError as e:
+        print(f"gRPC 오류 발생: {e}")
+        return None, None
     except Exception as e:
         print(f"오류 발생: {e}")
         return None, None
@@ -381,7 +385,7 @@ def extract_answer_from_xml(xml_string):
     if match:
         return match.group(1).strip()
 
-    return xml_string
+    return ""
 
 
 def extract_properties_and_values(content, url):
@@ -772,7 +776,6 @@ def main(page: ft.Page):
             summary_text = extract_answer_from_xml(
                 summary_response.text.strip())
 
-            # summary_text = summary_
             # summary_text = summary_response.text.strip()
 
             filename = save_markdown_file(
@@ -788,42 +791,36 @@ def main(page: ft.Page):
             answer_text.value = ""
             page.update()
 
-    # async def create_youtubook(e):
-    #     channel_url = url_field.value
-    #     async with AsyncWebCrawler() as crawler: #AsyncWebCrawler 삭제
-    #         result = await crawler.arun(
-    #             url=channel_url,
-    #         )
-    #         print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-    #         print(result.markdown)
-    #         print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    async def create_youtubook(e):
+        channel_url = url_field.value
+        async with AsyncWebCrawler() as crawler:
+            result = await crawler.arun(
+                url=channel_url,
+            )
+            print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            print(result.markdown)
+            print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-    #         # 정규 표현식을 사용하여 '/watch?v=...' 패턴 찾기
-    #         pattern = r"/watch\?v=[a-zA-Z0-9_-]+"
-    #         matches = re.findall(pattern, result.markdown)
+            # 정규 표현식을 사용하여 '/watch?v=...' 패턴 찾기
+            pattern = r"/watch\?v=[a-zA-Z0-9_-]+"
+            matches = re.findall(pattern, result.markdown)
 
-    #         # 찾은 패턴을 사용하여 전체 URL 생성
-    #         base_url = "https://www.youtube.com"
-    #         youtube_urls = [f"{base_url}{match}" for match in matches]
+            # 찾은 패턴을 사용하여 전체 URL 생성
+            base_url = "https://www.youtube.com"
+            youtube_urls = [f"{base_url}{match}" for match in matches]
 
-    #         # 중복 제거 및 순서 유지
-    #         unique_urls = []
-    #         seen = set()
-    #         for url in youtube_urls:
-    #             if url not in seen:
-    #                 unique_urls.append(url)
-    #                 seen.add(url)
+            # 중복 제거 및 순서 유지
+            unique_urls = []
+            seen = set()
+            for url in youtube_urls:
+                if url not in seen:
+                    unique_urls.append(url)
+                    seen.add(url)
 
-    #         # 결과 출력
-    #         print("YouTube URLs:")
-    #         for url in unique_urls:
-    #             makemarkdownforurl(url)
-    
-    def create_youtubook(e):
-      # crawl4ai 삭제
-      page.snack_bar = ft.SnackBar(ft.Text("지식백과 만들기 기능은 삭제되었습니다."), open=True)
-      page.update()
-
+            # 결과 출력
+            print("YouTube URLs:")
+            for url in unique_urls:
+                makemarkdownforurl(url)
 
     top_widgets = ft.Column([  # Column 위젯으로 묶기
         # api_key_field,
@@ -882,4 +879,4 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
-    ft.app(target=main)            
+    ft.app(target=main)
