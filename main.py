@@ -276,6 +276,7 @@ def generate_question_and_answer(extracted_text, transcript, question=None):
             위 문장에서 사람들이 가장 궁금해할 만한 핵심 질문을 하나 만들어줘.
             질문은 한국어로 작성하고, 간결하게 만들어줘.
             """
+            
             question_response = model.generate_content(
                 question_prompt, stream=False)  # 추가
 
@@ -524,11 +525,31 @@ def main(page: ft.Page):
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
 
-    url_field = ft.TextField(label="YouTube URL", width=450, hint_text="복사후 더블클릭")
+    def on_change(e):
+        # 정규 표현식을 사용하여 유튜브 URL 패턴 감지
+        youtube_regex = (
+            r'(https?://)?(www\.)?'
+            '(youtube|youtu)\.(com|be)/'
+            '(watch\?v=|embed/|shorts/|v/)?([\w-]+)(&.*)?'
+        )
+        match = re.search(youtube_regex, url_field.value)
+        if match:
+            print("유튜브 URL 감지!")
+            # 여기에 유튜브 URL 처리 함수 호출 (예: youtube_url_handler(match.group(6)))
+            youtube_url_handler(match.group(6)) # 비디오 ID 추출하여 함수에 전달
+        else:
+            print("유튜브 URL 아님")
+
+    def youtube_url_handler(video_id):
+        print(f"유튜브 비디오 ID: {video_id}")
+        # 여기에 유튜브 비디오 ID를 사용하여 원하는 동작 수행 (예: API 호출, 웹 페이지에 표시 등)
+        # 예:  page.add(ft.Text(f"비디오 ID: {video_id}"))
+
+    url_field = ft.TextField(label="YouTube URL", width=450, hint_text="복사후 더블클릭", on_change=on_change, expand=True) )
     
     
     def paste_on_double_click(e):
-        if url_field.value == "" or url_field.value == url_field.placeholder:
+        
             async def get_clipboard_and_paste():
                 clipboard_content = await page.get_clipboard()
                 if clipboard_content:
@@ -622,6 +643,7 @@ def main(page: ft.Page):
         width=450,
 
     )
+    re_answer_progress = ft.ProgressBar(width=350, visible=False)  # Initialize progress bar
 
     settings_dlg = ft.AlertDialog(
         modal=True,
@@ -659,6 +681,7 @@ def main(page: ft.Page):
 
     def extract_info(e):
         nonlocal extracted_text_data, transcript_data, thumbnail_display
+        re_answer_progress.visible = True  # Hide progress bar
         url = url_field.value
 
         video_id = url.split('v=')[1]
@@ -682,11 +705,13 @@ def main(page: ft.Page):
             transcript = YouTubeTranscriptApi.get_transcript(
                 video_id, languages=['ko', 'en'])
             transcript_data = transcript
+            re_answer_progress.value=0.3
             answer_text.value = "30 : 유튜브 내용을 추출하였습니다. "
             page.update()  # UI 업데이트
 
             markdown_result, question, answer = generate_question_and_answer(
                 extracted_text, transcript)
+            re_answer_progress.value=0.5
             answer_text.value = "50: 질문을 생성하고 답변을 가져옵니다."
             question_field.value = question
             page.update()  # UI 업데이트
@@ -695,6 +720,7 @@ def main(page: ft.Page):
             if markdown_result:
                 filename = save_markdown_file(
                     markdown_result, url, "question_answer")  # 추가: 마크다운 파일 저장
+                re_answer_progress.value=0.8
                 answer_text.value = "80: 답변을 저장합니다."
                 page.update()  # UI 업데이트
 
@@ -705,7 +731,7 @@ def main(page: ft.Page):
             else:
                 answer_text.value = "질문/답변 생성 실패"
 
-            
+            re_answer_progress.value=1.0
             answer_text.value = f"{answer}"
             page.update()  # UI 업데이트
         except Exception as e:
@@ -718,26 +744,46 @@ def main(page: ft.Page):
         question_value = question_field.value
         url = url_field.value
         if question_value:
+            re_answer_progress.value = 0  # Reset progress
+            re_answer_progress.visible = True  # Show progress bar
+            page.update()  # Update the UI
+
             try:
-                markdown_result, _, answer = generate_question_and_answer(
-                    extracted_text_data, transcript_data, question=question_value)
-                if markdown_result:
-                    filename = save_markdown_file(
-                        markdown_result, url, "re_question_answer")  # 추가: 마크다운 파일 저장
-                    answer_text.value = answer  # 수정: 마크다운 결과 출력
-                    page.overlay.append(ft.SnackBar(
-                        ft.Text(f"마크다운 파일 저장 완료: {filename}"), open=True))
-                else:
-                    answer_text.value = "질문/답변 생성 실패"
-                page.update()  # UI 업데이트
+                def update_progress(progress):
+                    re_answer_progress.value = progress
+                    page.update()
+
+                def generate_and_update(extracted_text_data, transcript_data, question_value):
+                    re_answer_progress.value = 0.2
+                    markdown_result, _, answer = generate_question_and_answer(
+                        extracted_text_data, transcript_data, question=question_value)
+                    re_answer_progress.value = 0.7
+                    if markdown_result:
+                        filename = save_markdown_file(
+                            markdown_result, url, "re_question_answer")
+                        re_answer_progress.value = 1.0
+                        answer_text.value = answer
+                        page.overlay.append(ft.SnackBar(
+                            ft.Text(f"마크다운 파일 저장 완료: {filename}"), open=True))
+                    else:
+                        answer_text.value = "질문/답변 생성 실패"
+                    update_progress(1.0)  # Indicate completion
+                    page.update()
+
+                page.spawn_async(generate_and_update,extracted_text_data, transcript_data, question_value )
+
             except Exception as e:
                 answer_text.value = f"오류 발생: {e}"
+                re_answer_progress.visible = False  # Hide progress bar on error
                 page.update()
+        else:
+            re_answer_progress.visible = False
+            page.update()
 
     def summarize_answer(e):
         nonlocal extracted_text_data, transcript_data
         url = url_field.value
-
+        re_answer_progress.visible = True
         makemarkdownforurl(url)
 
     def makemarkdownforurl(url):
@@ -831,9 +877,9 @@ def main(page: ft.Page):
         url_field,
         ft.Row(
             [
-                ft.ElevatedButton("궁금해서 못참아!", on_click=extract_info),
-                ft.ElevatedButton("요약하지말고 노트필기", on_click=summarize_answer),
-                ft.ElevatedButton("지식백과만들기[옵시디언]", on_click=create_youtubook),
+                ft.ElevatedButton("썸네일 못참아!", on_click=extract_info),
+                ft.ElevatedButton("요약 아니고 정리", on_click=summarize_answer),
+                ft.ElevatedButton("지식백과[옵시디언]", on_click=create_youtubook),
             ],
 
             alignment=ft.MainAxisAlignment.CENTER,
@@ -842,6 +888,7 @@ def main(page: ft.Page):
         ft.Row(
             [
                 ft.ElevatedButton("재답변", on_click=re_answer),
+                re_answer_progress,
             ],
             alignment=ft.MainAxisAlignment.CENTER,
         ),
@@ -852,7 +899,7 @@ def main(page: ft.Page):
         leading_width=40,
         title=ft.Text("유튜브 중독자"),
         center_title=False,
-        bgcolor=ft.colors.SURFACE_VARIANT,
+        bgcolor=ft.Colors.GREY_200,
         actions=[
             ft.PopupMenuButton(
                 items=[
