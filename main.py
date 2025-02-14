@@ -252,6 +252,73 @@ CATEGORY_MAP = """
 사용자 피드백: 사용자 피드백을 수집하여 분류 체계를 개선하는 것이 좋습니다.
 """
 
+def generate_question(extracted_text, transcript, question=None):
+    """
+    추출된 문장에서 질문을 만들고, transcript에서 답을 찾아 Concise하게 답변합니다.
+    markdown 형식 으로 답변을 반환합니다.
+    Args:
+      extracted_text: 추출된 문장
+      transcript: 답변을 찾을 transcript 내용
+      question: 수정된 질문 (선택적)
+
+    Returns:
+      생성된 질문, 답, 또는 None (질문 생성 실패 시)
+    """
+    try:
+        if question:  # 수정된 질문이 있으면 그대로 사용
+            question_text = question
+        else:
+            # 질문 생성 프롬프트
+            question_prompt = f"""
+            주어진 문장: "{extracted_text}"
+
+            위 문장에서 사람들이 가장 궁금해할 만한 핵심 질문을 하나 만들어줘.
+            질문은 한국어로 작성하고, 간결하게 만들어줘.
+            """
+            
+            question_response = model.generate_content(
+                question_prompt, stream=False)  # 추가
+
+            question_text = question_response.text.strip()
+
+        return question_text
+    except Exception as e:
+        print(f"오류 발생: {e}")
+        return None
+
+def generate_answer(question_text, transcript, question=None):
+    """
+    transcript에서 답을 찾아 Concise하게 답변합니다.
+    markdown 형식 으로 답변을 반환합니다.
+    Args:
+      extracted_text: 추출된 문장
+      transcript: 답변을 찾을 transcript 내용
+      question: 수정된 질문 (선택적)
+
+    Returns:
+      생성된 질문, 답, 또는 None (질문 생성 실패 시)
+    """
+    try:
+        # 답변 찾기 프롬프트
+        answer_prompt = f"""
+        질문: "{question_text}"
+        Transcript: "{transcript}"
+
+        위 질문에 대한 답을 Transcript에서 찾아서 한국어로 알려줘.
+        답변은 Concise하게 작성하고, 만약 답을 찾을 수 없다면 "답변을 찾을 수 없습니다." 라고 출력해줘.
+        """
+        answer_response = model.generate_content(
+            answer_prompt, stream=False)  # 추가
+        answer = answer_response.text.strip()
+
+        # Markdown 형식으로 결과 반환
+        markdown_result = f"## 질문\n{question_text}\n\n## 답변\n{answer}"
+        return markdown_result, answer
+
+    except Exception as e:
+        print(f"오류 발생: {e}")
+        return None, None
+
 
 def generate_question_and_answer(extracted_text, transcript, question=None):
     """
@@ -541,11 +608,51 @@ def main(page: ft.Page):
             print("유튜브 URL 아님")
 
     def youtube_url_handler(video_id):
+        nonlocal extracted_text_data, transcript_data, thumbnail_display
+        re_answer_progress.visible = True  # Hide progress bar
+        url = url_field.value
+
+        if '&' in video_id:
+            video_id = video_id.split('&')[0]
+
+        # 썸네일 URL 생성
+        thumbnail_url = f"https://img.youtube.com/vi/{
+            video_id}/mqdefault.jpg"
+        extracted_text = extract_korean_text_from_image_url(thumbnail_url)
+        extracted_text_data = extracted_text
+        if extracted_text:
+            print(f"추출된 한국어 문장:\n{extracted_text}")
+        else:
+            print("이미지에서 한국어 문장을 찾을 수 없습니다.")
+
+        thumbnail_display.src = thumbnail_url
+        thumbnail_display.update()  # 이미지 업데이트
+        try:
+
+            transcript = YouTubeTranscriptApi.get_transcript(
+                video_id, languages=['ko', 'en'])
+            transcript_data = transcript
+            re_answer_progress.value=0.3
+            answer_text.value = "30 : 유튜브 내용을 추출하였습니다. "
+            page.update()  # UI 업데이트
+
+            question = generate_question(
+                extracted_text, transcript)
+            re_answer_progress.value=0.5
+            answer_text.value = "50: 질문을 생성하고 답변을 가져옵니다."
+            question_field.value = question
+            page.update()  # UI 업데이트
+        except Exception as e:
+            question_field.value = f"오류: {e}"
+            # answer_text.value = ""
+            # page.update()
+######################################################################################
+
         print(f"유튜브 비디오 ID: {video_id}")
         # 여기에 유튜브 비디오 ID를 사용하여 원하는 동작 수행 (예: API 호출, 웹 페이지에 표시 등)
         # 예:  page.add(ft.Text(f"비디오 ID: {video_id}"))
 
-    url_field = ft.TextField(label="YouTube URL", width=450, hint_text="복사후 더블클릭", on_change=on_change, expand=True) )
+    url_field = ft.TextField(label="YouTube URL", width=450, hint_text="유튜브주소 복사해 넣으세요.", on_change=on_change, expand=True) 
     
     
     def paste_on_double_click(e):
@@ -685,35 +792,19 @@ def main(page: ft.Page):
         url = url_field.value
 
         video_id = url.split('v=')[1]
+        question_text = question_field.value 
         if '&' in video_id:
             video_id = video_id.split('&')[0]
 
-        # 썸네일 URL 생성
-        thumbnail_url = f"https://img.youtube.com/vi/{
-            video_id}/mqdefault.jpg"
-        extracted_text = extract_korean_text_from_image_url(thumbnail_url)
-        extracted_text_data = extracted_text
-        if extracted_text:
-            print(f"추출된 한국어 문장:\n{extracted_text}")
-        else:
-            print("이미지에서 한국어 문장을 찾을 수 없습니다.")
-
-        thumbnail_display.src = thumbnail_url
-        thumbnail_display.update()  # 이미지 업데이트
         try:
-
-            transcript = YouTubeTranscriptApi.get_transcript(
-                video_id, languages=['ko', 'en'])
-            transcript_data = transcript
             re_answer_progress.value=0.3
             answer_text.value = "30 : 유튜브 내용을 추출하였습니다. "
             page.update()  # UI 업데이트
 
-            markdown_result, question, answer = generate_question_and_answer(
-                extracted_text, transcript)
+            markdown_result, answer = generate_answer(
+                question_text, transcript_data)
             re_answer_progress.value=0.5
-            answer_text.value = "50: 질문을 생성하고 답변을 가져옵니다."
-            question_field.value = question
+            answer_text.value = "70: 답변을 생성하였습니다."
             page.update()  # UI 업데이트
 
             # 수정: markdown 결과 받기
@@ -721,7 +812,7 @@ def main(page: ft.Page):
                 filename = save_markdown_file(
                     markdown_result, url, "question_answer")  # 추가: 마크다운 파일 저장
                 re_answer_progress.value=0.8
-                answer_text.value = "80: 답변을 저장합니다."
+                answer_text.value = "80: 답변을 저장하였습니다."
                 page.update()  # UI 업데이트
 
                 answer_text.value = markdown_result  # 수정: 마크다운 결과 출력
@@ -735,9 +826,8 @@ def main(page: ft.Page):
             answer_text.value = f"{answer}"
             page.update()  # UI 업데이트
         except Exception as e:
-            question_field.value = f"오류: {e}"
-            # answer_text.value = ""
-            # page.update()
+            answer_text.value =f"오류: {e}"
+            page.update()
 
     def re_answer(e):
         nonlocal extracted_text_data, transcript_data
@@ -784,17 +874,13 @@ def main(page: ft.Page):
         nonlocal extracted_text_data, transcript_data
         url = url_field.value
         re_answer_progress.visible = True
+        re_answer_progress.value=0.3
         makemarkdownforurl(url)
 
     def makemarkdownforurl(url):
-        video_id = url.split('v=')[1]
-        if '&' in video_id:
-            video_id = video_id.split('&')[0]
-
+        nonlocal extracted_text_data, transcript_data
         try:
-            transcript = YouTubeTranscriptApi.get_transcript(
-                video_id, languages=['ko', 'en'])
-            transcript_data = transcript
+
             # 요약 프롬프트
             original_text = f"""
             Transcript: "{transcript_data}"
@@ -812,26 +898,33 @@ def main(page: ft.Page):
             summary_prompt = f"{custom_instruction}\n\n 원본프롬프트: {
                 original_text}\n\n"
 
-            summary_response = model.generate_content(
-                summary_prompt, stream=False)
+            response_stream  = model.generate_content(
+                summary_prompt, stream=True)
 
+            full_text = ""  # 전체 응답 텍스트를 저장할 변수
+
+            for chunk in response_stream:
+                full_text += chunk.text  # chunk.text를 사용하여 응답을 누적
+                answer_text.value = full_text  # Flet UI에 중간 결과 업데이트
+                page.update() # UI 업데이트
+
+            page.update()
+
+            print("Final Answer:", full_text)
+            
             summary_text = extract_answer_from_xml(
-                summary_response.text.strip())
-
-            # summary_text = summary_
-            # summary_text = summary_response.text.strip()
-
+                full_text.strip())
+            
             filename = save_markdown_file(
                 summary_text, url, "summary")  # 추가: 마크다운 파일 저장
-            answer_text.value = summary_text  # 수정: 마크다운 결과 출력
+              # 수정: 마크다운 결과 출력
             page.overlay.append(ft.SnackBar(
                 # 추가: 스낵바 표시
                 ft.Text(f"마크다운 파일 저장 완료: {filename}"), open=True))
 
             page.update()
         except Exception as e:
-            question_field.value = f"오류 발생: {e}"
-            answer_text.value = ""
+            answer_text.value = f"오류 발생: {e}"
             page.update()
 
     # async def create_youtubook(e):
@@ -866,32 +959,22 @@ def main(page: ft.Page):
     #             makemarkdownforurl(url)
     
     def create_youtubook(e):
-      # crawl4ai 삭제
-      page.snack_bar = ft.SnackBar(ft.Text("지식백과 만들기 기능은 삭제되었습니다."), open=True)
+      page.snack_bar = ft.SnackBar(ft.Text("유튜브채널의 모든영상 옵시디언 연동."), open=True)
       page.update()
 
 
     top_widgets = ft.Column([  # Column 위젯으로 묶기
-        # api_key_field,
-        # ft.ElevatedButton("API 키 저장", on_click=save_key),
         url_field,
+        question_field,
         ft.Row(
             [
                 ft.ElevatedButton("썸네일 못참아!", on_click=extract_info),
                 ft.ElevatedButton("요약 아니고 정리", on_click=summarize_answer),
-                ft.ElevatedButton("지식백과[옵시디언]", on_click=create_youtubook),
-            ],
-
-            alignment=ft.MainAxisAlignment.CENTER,
-        ),
-        question_field,
-        ft.Row(
-            [
-                ft.ElevatedButton("재답변", on_click=re_answer),
-                re_answer_progress,
+                ft.ElevatedButton("지식백과[옵시디언 연동]", on_click=create_youtubook),
             ],
             alignment=ft.MainAxisAlignment.CENTER,
         ),
+        re_answer_progress,
     ])
 
     page.appbar = ft.AppBar(
