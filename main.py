@@ -610,7 +610,6 @@ def main(page: ft.Page):
     def youtube_url_handler(video_id):
         nonlocal extracted_text_data, transcript_data, thumbnail_display
         re_answer_progress.visible = True  # Hide progress bar
-        url = url_field.value
 
         if '&' in video_id:
             video_id = video_id.split('&')[0]
