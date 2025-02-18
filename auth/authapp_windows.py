@@ -4,7 +4,8 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 import jwt
 import logging
-import os
+import socket
+import webbrowser
 from aiohttp import web
 
 from auth.authmanager import JWT_SECRET, AuthManager
@@ -97,34 +98,31 @@ class AuthApp:
         self.status_text.value = "로그인 중..."
         self.status_text.update()
         try:
-            # Redirect URI 설정 (환경 변수 사용)
-            redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI")
-            print(redirect_uri + "redirect_uri")
-            if not redirect_uri:
-                raise ValueError("OAUTH_REDIRECT_URI 환경 변수가 설정되지 않았습니다.")
+            port = 8550
+            # 다른 프로세스가 해당 포트를 사용하는지 확인
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                sock.bind(('', port))
+                sock.close()
+            except OSError:
+                # 8550 포트가 사용 중이면 8551 사용
+                port = 8551
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.bind(('', port))
+                    sock.close()
+                except OSError:
+                    raise Exception(f"포트 {port}를 사용할 수 없습니다.")
 
+            redirect_uri = f'http://localhost:{port}/callback'
             # OAuth 2.0 flow 생성
-            client_id = os.environ.get("GOOGLE_CLIENT_ID")
-            client_secret = os.environ.get("GOOGLE_CLIENT_SECRET")
-
-            flow = google_auth_oauthlib.flow.Flow.from_client_config(
-                {
-                    "web": {
-                        "client_id": client_id,
-                        "client_secret": client_secret,
-                        "redirect_uris": [redirect_uri],
-                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                        "token_uri": "https://oauth2.googleapis.com/token",
-                    }
-                },
-                scopes=[
-                    "openid",
-                    "https://www.googleapis.com/auth/userinfo.profile",
-                    "https://www.googleapis.com/auth/userinfo.email",
-                ],
+            secrets_file = get_resource_path("client_secrets.json")
+            flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
+                secrets_file,
+                ['openid', 'https://www.googleapis.com/auth/userinfo.profile',
+                    'https://www.googleapis.com/auth/userinfo.email'],  # 스코프 수정
+                redirect_uri=redirect_uri
             )
-            flow.redirect_uri = redirect_uri
-
             # 인증 URL 생성
             authorization_url, state = flow.authorization_url(
                 access_type='offline',
@@ -171,18 +169,16 @@ class AuthApp:
             app.add_routes([web.get('/callback', callback_handler)])
             runner = web.AppRunner(app)
             await runner.setup()
-            site = web.TCPSite(runner, '0.0.0.0', 8080)  # Fly.io 내부 포트 (fly.toml과 일치)
+            site = web.TCPSite(runner, 'localhost', port)
             await site.start()
 
-            # 클라이언트로 인증 URL 반환 (웹 브라우저 자동 열기 제거)
-            return web.json_response({"authorization_url": authorization_url}) #인증 url 반환
+            webbrowser.open(authorization_url)
 
         except Exception as e:
             logging.error(f"Google 로그인 에러: {str(e)}")
             self.status_text.value = "로그인 실패"
             self.status_text.update()
             self.auth_callback(None)  # 인증 실패 후 콜백 실행
-            return web.json_response({"error": str(e)}, status=500) #에러 반환
 
     def update_ui_after_login(self):
         # 로그인 성공 후 UI 업데이트

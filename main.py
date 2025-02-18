@@ -615,8 +615,7 @@ def main(page: ft.Page):
             video_id = video_id.split('&')[0]
 
         # 썸네일 URL 생성
-        thumbnail_url = f"https://img.youtube.com/vi/{
-            video_id}/mqdefault.jpg"
+        thumbnail_url = f"https://img.youtube.com/vi/{video_id}/mqdefault.jpg"
         extracted_text = extract_korean_text_from_image_url(thumbnail_url)
         extracted_text_data = extracted_text
         if extracted_text:
@@ -894,8 +893,7 @@ def main(page: ft.Page):
             5. 위에서 만든 질문은 생략하고, 정리된 답변만 markdown 형식으로 출력 해라.
             """
 
-            summary_prompt = f"{custom_instruction}\n\n 원본프롬프트: {
-                original_text}\n\n"
+            summary_prompt = f"{custom_instruction}\n\n 원본프롬프트: {original_text}\n\n"
 
             response_stream  = model.generate_content(
                 summary_prompt, stream=True)

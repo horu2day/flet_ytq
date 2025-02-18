@@ -5,10 +5,10 @@
       "name": "Flet: Run with Hot Reload",
       "type": "debugpy",
       "request": "launch",
-      "program": "${workspaceFolder}/.venv/Lib/site-packages/flet_cli/cli.py",
-      "args": ["run", "-r", "${workspaceFolder}/main.py"],
+      "module": "flet",
+      "args": ["run", "-r", "main.py", "--name", "my_flet_app"],
       "console": "integratedTerminal",
-      "justMyCode": true,
+      "justMyCode": false,
       "env": {
         "PYTHONPATH": "${workspaceFolder}"
       }
@@ -17,9 +17,10 @@
       "name": "Flet: Run Debug",
       "type": "debugpy",
       "request": "launch",
-      "program": "${workspaceFolder}/app.py",
+      "program": "${workspaceFolder}/main.py",
       "console": "integratedTerminal",
       "justMyCode": true,
+      "stopOnEntry": true,
       "env": {
         "PYTHONPATH": "${workspaceFolder}"
       }

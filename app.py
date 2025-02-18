@@ -26,7 +26,9 @@ def main(page: ft.Page):
 if __name__ == "__main__":
     try:
         # ft.app(target=main, view=ft.WEB_BROWSER, port=8080, show_console=False)
-        ft.app(target=main, view=ft.FLET_APP)  # 데스크톱 모드로 실행
+        #ft.app(target=main, view=ft.FLET_APP)  # 데스크톱 모드로 실행
+        #ft.app(target=main, port=8000, host="0.0.0.0") 
+        ft.app(target=main)            
     except Exception as e:
         logging.error(f"Server error: {str(e)}")
         raise
