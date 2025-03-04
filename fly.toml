@@ -6,6 +6,12 @@ processes = []
 
 [env]
     FLET_SESSION_TIMEOUT = "60"
+    SUPABASE_URL = "https://isircfpmirzzkotuyybd.supabase.co"
+    SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzaXJjZnBtaXJ6emtvdHV5eWJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTgyNDg0MDksImV4cCI6MjAzMzgyNDQwOX0.1ZoRsja9sDo6F1jDk3g1QniW2OGxH5oVBj4N7mWqauk"
+    JWT_SECRET = "your_super_secret_key_123!@#"
+    GOOGLE_CLIENT_ID = "974934336397-1hojqg0umtm6mnasei42s3ajfet70k83.apps.googleusercontent.com"
+    GOOGLE_CLIENT_SECRET = "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"
+    GOOGLE_REDIRECT_URI = "https://isircfpmirzzkotuyybd.supabase.co/auth/v1/callback,https://utuv.fly.dev/callback"
 
 [http_service]
     internal_port = 8000

@@ -6,7 +6,7 @@
       "type": "debugpy",
       "request": "launch",
       "module": "flet",
-      "args": ["run", "-r", "main.py", "--name", "my_flet_app"],
+      "args": ["run", "-web", "app.py", "--name", "utuv"],
       "console": "integratedTerminal",
       "justMyCode": false,
       "env": {

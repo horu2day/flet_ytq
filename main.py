@@ -23,6 +23,7 @@ from flet import FilePicker, FilePickerResultEvent
 # 키 생성 및 암호화 함수
 GOOGLE_API_KEY = None
 DOWNLOAD_DIR = os.getcwd()  # 기본값은 현재 작업 디렉토리
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 def generate_key(password: str):
     password = password.encode()
@@ -123,13 +124,14 @@ def load_config(encryption_key):
 # 2. 프로그램 시작 시 API 키 로드 및 설정
 # 변경 4: initialize_api 함수 수정
 def initialize_api(password):
-    global DOWNLOAD_DIR
+    global DOWNLOAD_DIR, GOOGLE_API_KEY
     encryption_key = generate_key(password)
     config = load_config(encryption_key)
 
     if config and config["api_key"]:
         try:
             genai.configure(api_key=config["api_key"])
+            GOOGLE_API_KEY = config["api_key"] # API 키 설정
             DOWNLOAD_DIR = config["download_dir"]  # 설정에서 다운로드 디렉토리 불러오기
             print("API 키 및 설정이 성공적으로 로드되었습니다.")
         except Exception as e:
@@ -161,10 +163,11 @@ initialize_api(password_for_load)
 # # API 키를 저장하는 함수
 
 
-def save_api_key(api_key):
+def save_api_key(api_key, encryption_key):
     config_file = "config.json"
-    config = {"api_key": api_key}
-    with open(config_file, "w") as f:
+    encrypted_api_key = encrypt_api_key(api_key, encryption_key)
+    config = {"api_key": encrypted_api_key}
+    with open("config.json", "w") as f:
         json.dump(config, f)
 
 
@@ -596,8 +599,8 @@ def main(page: ft.Page):
         # 정규 표현식을 사용하여 유튜브 URL 패턴 감지
         youtube_regex = (
             r'(https?://)?(www\.)?'
-            '(youtube|youtu)\.(com|be)/'
-            '(watch\?v=|embed/|shorts/|v/)?([\w-]+)(&.*)?'
+            r'(youtube|youtu)\.(com|be)/'
+            r'(watch\?v=|embed/|shorts/|v/)?([\w-]+)(&.*)?'
         )
         match = re.search(youtube_regex, url_field.value)
         if match:
@@ -777,8 +780,6 @@ def main(page: ft.Page):
     picker = FilePicker(on_result=on_dialog_result)
     page.overlay.append(picker)
 
-    
-
     def open_dlg_settings(e):
         page.dialog = settings_dlg
         settings_dlg.open = True  # 다이얼로그를 열어주는 코드 추가
@@ -929,7 +930,7 @@ def main(page: ft.Page):
     #     async with AsyncWebCrawler() as crawler: #AsyncWebCrawler 삭제
     #         result = await crawler.arun(
     #             url=channel_url,
-    #         )
+    #             )
     #         print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
     #         print(result.markdown)
     #         print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
@@ -1005,8 +1006,8 @@ def main(page: ft.Page):
                 expand=True,
             ),
         ])
-    )
+    )           
 
 
 if __name__ == "__main__":
-    ft.app(target=main)            
+    ft.app(target=main)

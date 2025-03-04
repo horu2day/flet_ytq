@@ -66,7 +66,7 @@ def google_oauth_callback(req: Request):
     except Exception as e:
         logging.error(f"구글 OAuth 콜백 에러: {e}")
         auth_app_instance.auth_callback(None)
-        return f"인증 실패: {e}"
+        return f"google_oauth_callback 인증 실패: {e}"
 
 
 def main(page: ft.Page):
@@ -76,7 +76,7 @@ def main(page: ft.Page):
                 page.clean()
                 youtube_app(page)
             else:
-                page.add(ft.Text("인증 실패"))
+                page.add(ft.Text("main 함수 인증 실패"))
         except Exception as e:
             logging.error(f"Error in auth_callback: {str(e)}")
             page.add(ft.Text(f"오류가 발생했습니다: {str(e)}"))
