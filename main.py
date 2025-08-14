@@ -187,7 +187,7 @@ generation_config = {
     "response_mime_type": "text/plain",
 }
 model = genai.GenerativeModel(
-    model_name="gemini-2.0-flash-exp",
+    model_name="gemini-2.5-flash",
     # model_name="gemini-2.0-flash-thinking-exp-01-21",
     generation_config=generation_config,
 )
@@ -559,7 +559,7 @@ def save_markdown_file(content, video_url, filename_prefix="output"):
     filename = f"{sanitized_video_title}_{timestamp}.md"
 
     
-    path = os.path.join(DOWNLOAD_DIR, sanitized_channel_name)  # 전역 DOWNLOAD_DIR 사용
+    path = os.path.join(DOWNLOAD_DIR, "Down", sanitized_channel_name)  # 전역 DOWNLOAD_DIR 사용
     if not os.path.exists(path):  # 채널 이름 폴더가 없으면 생성
         os.makedirs(path, exist_ok=True)
 

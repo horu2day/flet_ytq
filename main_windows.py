@@ -492,7 +492,7 @@ def save_markdown_file(content, video_url, filename_prefix="output"):
     filename = f"{sanitized_video_title}_{timestamp}.md"
 
     
-    path = os.path.join(DOWNLOAD_DIR, sanitized_channel_name)  # 전역 DOWNLOAD_DIR 사용
+    path = os.path.join(DOWNLOAD_DIR, "Down", sanitized_channel_name)  # 전역 DOWNLOAD_DIR 사용
     if not os.path.exists(path):  # 채널 이름 폴더가 없으면 생성
         os.makedirs(path, exist_ok=True)
 
